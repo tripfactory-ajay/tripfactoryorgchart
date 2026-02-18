@@ -1,0 +1,11 @@
+{
+  "timestamp": "2024-01-15T00:00:00.000Z",
+  "exportedBy": "System",
+  "version": "2.0",
+  "changes": [],
+  "data": [
+    { "id": 1, "name": "Vinay Gupta", "role": "Founder & CEO", "dept": "management", "isManager": true, "isExecutive": true },
+    { "id": 2, "name": "Raj Kumar", "role": "COO (Chief Operating Officer)", "dept": "management", "isManager": true, "isExecutive": true }
+    // ... all 416 employees
+  ]
+}
