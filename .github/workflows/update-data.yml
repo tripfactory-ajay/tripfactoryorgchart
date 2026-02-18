@@ -1,0 +1,42 @@
+name: Update Org Structure
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.title, 'ORG-UPDATE:')
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Extract data from issue
+      id: extract
+      run: |
+        echo "${{ github.event.issue.body }}" > update.json
+        
+    - name: Validate and update
+      run: |
+        if jq -e . update.json > /dev/null 2>&1; then
+          mv update.json data/org-structure.json
+          echo "Data updated successfully"
+        else
+          echo "Invalid JSON data"
+          exit 1
+        fi
+        
+    - name: Commit changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/org-structure.json
+        git commit -m "Update org structure from issue #${{ github.event.issue.number }}" || exit 0
+        git push
+        
+    - name: Close issue
+      uses: peter-evans/close-issue@v2
+      with:
+        issue-number: ${{ github.event.issue.number }}
+        comment: "✅ Data updated successfully! Changes will be live in 1-2 minutes."
