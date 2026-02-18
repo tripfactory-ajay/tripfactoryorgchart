@@ -280,6 +280,7 @@
             gap: 12px;
             z-index: 2000;
             font-weight: 600;
+            cursor: pointer;
         }
         
         .pending-changes.active { display: flex; }
@@ -648,9 +649,9 @@
             background: white;
             border-radius: 16px;
             padding: 24px;
-            max-width: 600px;
+            max-width: 700px;
             width: 90%;
-            max-height: 80vh;
+            max-height: 90vh;
             overflow-y: auto;
             box-shadow: var(--shadow-lg);
         }
@@ -674,7 +675,7 @@
         }
         
         .modal-body { margin-bottom: 20px; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
         
         .change-list {
             max-height: 300px;
@@ -683,6 +684,7 @@
             border-radius: 8px;
             padding: 12px;
             margin: 12px 0;
+            border: 1px solid var(--border);
         }
         
         .change-item {
@@ -716,6 +718,17 @@
             margin: 4px 0;
         }
         
+        .code-block {
+            background: #2d3748;
+            color: #68d391;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85em;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
@@ -733,6 +746,7 @@
             .header-controls { width: 100%; justify-content: center; flex-wrap: wrap; }
             .btn-group { flex-wrap: wrap; justify-content: center; }
             .leadership-grid { grid-template-columns: 1fr; }
+            .modal { max-width: 95%; padding: 16px; }
         }
     </style>
 </head>
@@ -854,26 +868,26 @@
             </div>
             <div class="modal-body">
                 <div class="github-instructions">
-                    <h4>📋 How to save your changes:</h4>
+                    <h4>📋 Quick Save Instructions:</h4>
                     <ol>
-                        <li>Copy the JSON data below (click the copy button)</li>
-                        <li>Go to your GitHub repository</li>
-                        <li>Navigate to <code>data/org-structure.json</code></li>
-                        <li>Click the ✏️ Edit button</li>
-                        <li>Paste the JSON data</li>
-                        <li>Scroll down and click "Commit changes"</li>
-                        <li>Wait 1-2 minutes, then refresh this page</li>
+                        <li>Click <strong>"Copy JSON"</strong> button below</li>
+                        <li>Click <strong>"Open GitHub"</strong> to go to the file</li>
+                        <li>Click the ✏️ <strong>Edit</strong> button (pencil icon)</li>
+                        <li>Select all text (Ctrl+A) and paste (Ctrl+V)</li>
+                        <li>Scroll down, add commit message like "Updated org structure"</li>
+                        <li>Click <strong>"Commit changes"</strong></li>
+                        <li>Wait 1 minute, refresh this page to see updates</li>
                     </ol>
                 </div>
                 
-                <h4 style="margin-bottom: 12px;">Changes to be saved:</h4>
+                <h4 style="margin-bottom: 12px;">Changes Summary (<span id="modalChangeCount">0</span> changes):</h4>
                 <div class="change-list" id="changeList">
                     Loading changes...
                 </div>
                 
                 <div style="margin-top: 16px;">
-                    <label style="font-weight: 600; margin-bottom: 8px; display: block;">JSON Data (auto-generated):</label>
-                    <textarea id="jsonOutput" style="width: 100%; height: 200px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 0.85em;" readonly></textarea>
+                    <label style="font-weight: 600; margin-bottom: 8px; display: block;">JSON Data (click Copy JSON button):</label>
+                    <textarea id="jsonOutput" style="width: 100%; height: 150px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 0.8em;" readonly></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -885,9 +899,9 @@
     </div>
 
     <script>
-        // CONFIGURATION - UPDATE THESE VALUES
+        // CONFIGURATION - UPDATED FOR YOUR REPO
         const CONFIG = {
-            githubRepo: 'tripfactory-ajay/tripfactory-ajay.github.io', // Format: owner/repo
+            githubRepo: 'tripfactory-ajay/tripfactoryorgchart',
             dataPath: 'data/org-structure.json',
             githubBranch: 'main'
         };
@@ -902,50 +916,6 @@
         let undoStack = [];
         let changes = [];
 
-        // Embedded fallback data (your full dataset)
-        const FALLBACK_DATA = [
-            { id: 1, name: "Vinay Gupta", role: "Founder & CEO", dept: "management", isManager: true, isExecutive: true },
-            { id: 2, name: "Raj Kumar", role: "COO (Chief Operating Officer)", dept: "management", isManager: true, isExecutive: true },
-            { id: 3, name: "Ajay Kawa", role: "BTO (Business Transition Officer)", dept: "management", isManager: true, isExecutive: true },
-            { id: 4, name: "Amit Aggarwal", role: "Co-Founder (Tech)", dept: "management", isManager: true, isExecutive: true },
-            { id: 5, name: "Ankit Agarwal", role: "Co-Founder (Procurement)", dept: "management", isManager: true, isExecutive: true },
-            { id: 6, name: "Ankush Agarwal", role: "Co-Founder (People & Marketing)", dept: "management", isManager: true, isExecutive: true },
-            { id: 7, name: "Varun Gupta", role: "Co-Founder (Tech)", dept: "management", isManager: true, isExecutive: true },
-            { id: 8, name: "Vikas Sharma", role: "CEO's Office", dept: "management", isManager: true, isExecutive: false },
-            { id: 9, name: "Vandana Mishra", role: "CEO's Office", dept: "management", isManager: true, isExecutive: false },
-            { id: 10, name: "Lalitha P", role: "Country Manager - India", dept: "management", isManager: true, isExecutive: false },
-            { id: 11, name: "Rahul Narayan", role: "Chief People Officer", dept: "management", isManager: true, isExecutive: false },
-            { id: 12, name: "Yogesh Mehta", role: "Chief Commercial Officer", dept: "management", isManager: true, isExecutive: false },
-            { id: 13, name: "Tonney Sharma", role: "Head of Quality", dept: "management", isManager: true, isExecutive: false },
-            { id: 14, name: "Seema Tabbasum", role: "VP - Business Partnership", dept: "management", isManager: true, isExecutive: false },
-            // ... [Include all 416 employees here - truncated for brevity] ...
-            // Add all your employee data here as fallback
-        ];
-
-        // Initialize
-        async function initialize() {
-            showToast('Loading data...', 'info');
-            
-            try {
-                const response = await fetch(RAW_URL + '?t=' + Date.now());
-                if (response.ok) {
-                    const data = await response.json();
-                    originalData = JSON.parse(JSON.stringify(data.data || data));
-                    showToast('Loaded from GitHub', 'success');
-                } else {
-                    throw new Error('GitHub fetch failed');
-                }
-            } catch (e) {
-                console.log('Using fallback data');
-                originalData = JSON.parse(JSON.stringify(FALLBACK_DATA));
-                showToast('Using local backup data', 'warning');
-            }
-            
-            currentData = JSON.parse(JSON.stringify(originalData));
-            undoStack = [JSON.parse(JSON.stringify(originalData))];
-            refreshAll();
-        }
-
         // Toast notifications
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
@@ -959,6 +929,31 @@
                 toast.style.transform = 'translateX(100%)';
                 setTimeout(() => toast.remove(), 300);
             }, 4000);
+        }
+
+        // Initialize - Load from GitHub
+        async function initialize() {
+            showToast('Loading data from GitHub...', 'info');
+            
+            try {
+                const response = await fetch(RAW_URL + '?t=' + Date.now());
+                if (response.ok) {
+                    const data = await response.json();
+                    originalData = JSON.parse(JSON.stringify(data.data || data));
+                    showToast('Loaded from GitHub successfully!', 'success');
+                } else {
+                    throw new Error('GitHub fetch failed');
+                }
+            } catch (e) {
+                console.error('GitHub load failed:', e);
+                showToast('Could not load from GitHub. Check console.', 'error');
+                // Start with empty data if GitHub fails
+                originalData = [];
+            }
+            
+            currentData = JSON.parse(JSON.stringify(originalData));
+            undoStack = [JSON.parse(JSON.stringify(originalData))];
+            refreshAll();
         }
 
         // Track changes
@@ -982,10 +977,12 @@
         function updatePendingChanges() {
             const indicator = document.getElementById('pendingChanges');
             const count = document.getElementById('changeCount');
+            const modalCount = document.getElementById('modalChangeCount');
             
             if (changes.length > 0) {
                 indicator.classList.add('active');
                 count.textContent = changes.length;
+                if (modalCount) modalCount.textContent = changes.length;
             } else {
                 indicator.classList.remove('active');
             }
@@ -1050,13 +1047,13 @@
                 const hadIt = person.business.includes(type);
                 if (cb.checked && !hadIt) {
                     person.business.push(type);
-                    trackChange(person, 'Business', person.business.join(', '), [...person.business, type].join(', '));
+                    trackChange(person, 'Business', person.business.filter(t => t !== type).join(', ') || '(none)', person.business.join(', '));
                 } else if (!cb.checked && hadIt) {
+                    const oldBiz = person.business.join(', ');
                     person.business = person.business.filter(t => t !== type);
-                    trackChange(person, 'Business', [...person.business, type].join(', '), person.business.join(', '));
+                    trackChange(person, 'Business', oldBiz, person.business.join(', ') || '(none)');
                 }
                 cb.parentElement.classList.toggle('checked', cb.checked);
-                refreshAll();
             }
         }
 
@@ -1129,7 +1126,7 @@
             window.open(EDIT_URL, '_blank');
         }
 
-        // Render functions (same as before)
+        // Render functions
         function getDeptOptions(selected) {
             const depts = {
                 management: '👔 Management',
@@ -1147,7 +1144,7 @@
         }
 
         function getRoleOptions(selected) {
-            const roles = [...new Set(originalData.map(p => p.role))].sort();
+            const roles = [...new Set(currentData.map(p => p.role))].sort();
             let html = `<option value="">Select Role...</option>`;
             roles.forEach(r => html += `<option value="${r}" ${r === selected ? 'selected' : ''}>${r}</option>`);
             html += `<option value="CUSTOM">✏️ Custom...</option>`;
